@@ -44,9 +44,12 @@ async function migrate() {
       nome TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       senha TEXT NOT NULL,
+      admin INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await migratedAddColumn('usuarios', 'admin', 'INTEGER NOT NULL DEFAULT 0');
 
   await query(`
     CREATE TABLE IF NOT EXISTS categorias (
@@ -123,6 +126,10 @@ async function migrate() {
   await query('CREATE INDEX IF NOT EXISTS idx_despesas_data ON despesas(data)');
   await query('CREATE INDEX IF NOT EXISTS idx_despesas_categoria ON despesas(categoria_id)');
   await query('CREATE INDEX IF NOT EXISTS idx_despesas_status ON despesas(status)');
+
+  await query(
+    "UPDATE usuarios SET admin = 1 WHERE email = 'matheusrsmendes@gmail.com'"
+  );
 
   const count = await queryOne('SELECT COUNT(*)::int as total FROM categorias');
   if (count.total === 0) {

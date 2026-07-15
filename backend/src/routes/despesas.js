@@ -43,7 +43,9 @@ router.get('/', async (req, res, next) => {
     if (parcelado !== undefined) {
       idx += 1; sql += ` AND d.parcelado = $${idx}`; params.push(Number(parcelado));
     }
-    idx += 1; sql += ` AND (d.usuario_id = $${idx} OR d.usuario_id IS NULL)`; params.push(req.usuario.id);
+    if (!req.usuario.admin) {
+      idx += 1; sql += ` AND (d.usuario_id = $${idx} OR d.usuario_id IS NULL)`; params.push(req.usuario.id);
+    }
 
     sql += ' ORDER BY d.data DESC, d.created_at DESC';
     const despesas = await queryAll(sql, params);
@@ -53,13 +55,15 @@ router.get('/', async (req, res, next) => {
 
 router.get('/parcelamento/:id', async (req, res, next) => {
   try {
+    const userFilterP = req.usuario.admin ? '' : ' AND (d.usuario_id = $2 OR d.usuario_id IS NULL)';
+    const paramsP = req.usuario.admin ? [req.params.id] : [req.params.id, req.usuario.id];
     const parcelas = await queryAll(
       `SELECT d.*, c.nome as categoria_nome, c.cor as categoria_cor
        FROM despesas d
        JOIN categorias c ON d.categoria_id = c.id
-       WHERE d.id_parcelamento = $1 AND (d.usuario_id = $2 OR d.usuario_id IS NULL)
+       WHERE d.id_parcelamento = $1${userFilterP}
        ORDER BY d.parcela_atual`,
-      [req.params.id, req.usuario.id]
+      paramsP
     );
     if (parcelas.length === 0) return res.status(404).json({ error: 'Parcelamento não encontrado' });
     res.json(parcelas);
@@ -68,12 +72,14 @@ router.get('/parcelamento/:id', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    const uf = req.usuario.admin ? '' : ' AND (d.usuario_id = $2 OR d.usuario_id IS NULL)';
+    const p = req.usuario.admin ? [req.params.id] : [req.params.id, req.usuario.id];
     const despesa = await queryOne(`
       SELECT d.*, c.nome as categoria_nome, c.cor as categoria_cor
       FROM despesas d
       JOIN categorias c ON d.categoria_id = c.id
-      WHERE d.id = $1 AND (d.usuario_id = $2 OR d.usuario_id IS NULL)
-    `, [req.params.id, req.usuario.id]);
+      WHERE d.id = $1${uf}
+    `, p);
     if (!despesa) return res.status(404).json({ error: 'Despesa não encontrada' });
     res.json(despesa);
   } catch (err) { next(err); }
@@ -147,7 +153,9 @@ router.post('/', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const { descricao, valor, categoria_id, data, forma_pagamento, status, observacao } = req.body;
-    const current = await queryOne('SELECT * FROM despesas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
+    const uf2 = req.usuario.admin ? '' : ' AND (usuario_id = $2 OR usuario_id IS NULL)';
+    const p2 = req.usuario.admin ? [req.params.id] : [req.params.id, req.usuario.id];
+    const current = await queryOne(`SELECT * FROM despesas WHERE id = $1${uf2}`, p2);
     if (!current) return res.status(404).json({ error: 'Despesa não encontrada' });
 
     await query(
@@ -174,17 +182,20 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const current = await queryOne('SELECT * FROM despesas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
+    const uf3 = req.usuario.admin ? '' : ' AND (usuario_id = $2 OR usuario_id IS NULL)';
+    const p3 = req.usuario.admin ? [req.params.id] : [req.params.id, req.usuario.id];
+    const current = await queryOne(`SELECT * FROM despesas WHERE id = $1${uf3}`, p3);
     if (!current) return res.status(404).json({ error: 'Despesa não encontrada' });
 
     const { remover_todas } = req.query;
 
     if (current.parcelado && current.id_parcelamento && remover_todas === 'true') {
-      const result = await query('DELETE FROM despesas WHERE id_parcelamento = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [current.id_parcelamento, req.usuario.id]);
+      const pDel = req.usuario.admin ? [current.id_parcelamento] : [current.id_parcelamento, req.usuario.id];
+      const result = await query(`DELETE FROM despesas WHERE id_parcelamento = $1${uf3}`, pDel);
       return res.json({ message: `${result.rowCount} parcelas removidas` });
     }
 
-    const result = await query('DELETE FROM despesas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
+    const result = await query(`DELETE FROM despesas WHERE id = $1${uf3}`, p3);
     res.json({ message: 'Despesa removida' });
   } catch (err) { next(err); }
 });

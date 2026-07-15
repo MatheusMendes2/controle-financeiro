@@ -1,15 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FiHome, FiTrendingUp, FiTrendingDown, FiGrid, FiBarChart2, FiLogOut } from 'react-icons/fi';
+import { FiHome, FiTrendingUp, FiTrendingDown, FiGrid, FiBarChart2, FiSettings, FiLogOut } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
-
-const navItems = [
-  { to: '/', icon: FiHome, label: 'Dashboard' },
-  { to: '/receitas', icon: FiTrendingUp, label: 'Receitas' },
-  { to: '/despesas', icon: FiTrendingDown, label: 'Despesas' },
-  { to: '/categorias', icon: FiGrid, label: 'Categorias' },
-  { to: '/relatorios', icon: FiBarChart2, label: 'Relatórios' }
-];
 
 function Layout({ children }) {
   const { usuario, logout } = useAuth();
@@ -22,19 +14,26 @@ function Layout({ children }) {
           <span>Controle Financeiro</span>
         </div>
         <nav className="sidebar-nav">
-          {navItems.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `nav-item${isActive ? ' active' : ''}`
-              }
-              end={item.to === '/'}
-            >
-              <item.icon />
-              <span>{item.label}</span>
+          <NavLink to="/" end className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <FiHome /><span>Dashboard</span>
+          </NavLink>
+          <NavLink to="/receitas" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <FiTrendingUp /><span>Receitas</span>
+          </NavLink>
+          <NavLink to="/despesas" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <FiTrendingDown /><span>Despesas</span>
+          </NavLink>
+          <NavLink to="/categorias" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <FiGrid /><span>Categorias</span>
+          </NavLink>
+          <NavLink to="/relatorios" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+            <FiBarChart2 /><span>Relatórios</span>
+          </NavLink>
+          {usuario?.admin && (
+            <NavLink to="/admin" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <FiSettings /><span>Manutenção</span>
             </NavLink>
-          ))}
+          )}
         </nav>
         <div style={{ borderTop: '1px solid var(--border)', padding: 12 }}>
           <div style={{ padding: '8px 16px', marginBottom: 4 }}>

@@ -7,6 +7,7 @@ import Receitas from './components/Receitas';
 import Despesas from './components/Despesas';
 import Categorias from './components/Categorias';
 import Relatorios from './components/Relatorios';
+import Admin from './components/Admin';
 import Login from './components/Login';
 import Register from './components/Register';
 
@@ -32,6 +33,7 @@ function AppRoutes() {
       <Route path="/despesas" element={<PrivateRoute><Layout><Despesas /></Layout></PrivateRoute>} />
       <Route path="/categorias" element={<PrivateRoute><Layout><Categorias /></Layout></PrivateRoute>} />
       <Route path="/relatorios" element={<PrivateRoute><Layout><Relatorios /></Layout></PrivateRoute>} />
+      <Route path="/admin" element={<PrivateRoute><Layout><Admin /></Layout></PrivateRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

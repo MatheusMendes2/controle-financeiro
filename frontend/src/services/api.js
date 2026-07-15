@@ -31,6 +31,11 @@ export const despesasAPI = {
   getParcelas: (idParcelamento) => api.get(`/despesas/parcelamento/${idParcelamento}`)
 };
 
+export const adminAPI = {
+  listUsuarios: () => api.get('/admin/usuarios'),
+  deleteUsuario: (id) => api.delete(`/admin/usuarios/${id}`)
+};
+
 export const relatoriosAPI = {
   dashboard: (params) => api.get('/relatorios/dashboard', { params }),
   evolucaoMensal: (params) => api.get('/relatorios/evolucao-mensal', { params }),

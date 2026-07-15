@@ -33,7 +33,9 @@ router.get('/', async (req, res, next) => {
     if (data_fim) {
       idx += 1; sql += ` AND r.data_recebimento <= $${idx}`; params.push(data_fim);
     }
-    idx += 1; sql += ` AND (r.usuario_id = $${idx} OR r.usuario_id IS NULL)`; params.push(req.usuario.id);
+    if (!req.usuario.admin) {
+      idx += 1; sql += ` AND (r.usuario_id = $${idx} OR r.usuario_id IS NULL)`; params.push(req.usuario.id);
+    }
 
     sql += ' ORDER BY r.data_recebimento DESC, r.created_at DESC';
     const receitas = await queryAll(sql, params);
@@ -43,12 +45,14 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    const userFilter = req.usuario.admin ? '' : ' AND (r.usuario_id = $2 OR r.usuario_id IS NULL)';
+    const params = req.usuario.admin ? [req.params.id] : [req.params.id, req.usuario.id];
     const receita = await queryOne(`
       SELECT r.*, c.nome as categoria_nome, c.cor as categoria_cor
       FROM receitas r
       JOIN categorias c ON r.categoria_id = c.id
-      WHERE r.id = $1 AND (r.usuario_id = $2 OR r.usuario_id IS NULL)
-    `, [req.params.id, req.usuario.id]);
+      WHERE r.id = $1${userFilter}
+    `, params);
     if (!receita) return res.status(404).json({ error: 'Receita não encontrada' });
     res.json(receita);
   } catch (err) { next(err); }
@@ -77,7 +81,9 @@ router.post('/', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const { descricao, valor, categoria_id, data_recebimento, observacao } = req.body;
-    const current = await queryOne('SELECT * FROM receitas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
+    const userFilter = req.usuario.admin ? '' : ' AND (usuario_id = $2 OR usuario_id IS NULL)';
+    const params = req.usuario.admin ? [req.params.id] : [req.params.id, req.usuario.id];
+    const current = await queryOne(`SELECT * FROM receitas WHERE id = $1${userFilter}`, params);
     if (!current) return res.status(404).json({ error: 'Receita não encontrada' });
 
     await query(
@@ -103,7 +109,9 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const result = await query('DELETE FROM receitas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
+    const userFilter = req.usuario.admin ? '' : ' AND (usuario_id = $2 OR usuario_id IS NULL)';
+    const params = req.usuario.admin ? [req.params.id] : [req.params.id, req.usuario.id];
+    const result = await query(`DELETE FROM receitas WHERE id = $1${userFilter}`, params);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Receita não encontrada' });
     res.json({ message: 'Receita removida' });
   } catch (err) { next(err); }

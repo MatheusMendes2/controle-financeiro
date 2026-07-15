@@ -28,7 +28,7 @@ router.post('/register', async (req, res, next) => {
     const usuario = result.rows[0];
     const token = gerarToken(usuario);
 
-    res.status(201).json({ usuario, token });
+    res.status(201).json({ usuario: { ...usuario, admin: false }, token });
   } catch (err) { next(err); }
 });
 
@@ -50,7 +50,7 @@ router.post('/login', async (req, res, next) => {
     }
 
     const token = gerarToken(usuario);
-    res.json({ usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email }, token });
+    res.json({ usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, admin: usuario.admin === 1 || usuario.admin === true }, token });
   } catch (err) { next(err); }
 });
 

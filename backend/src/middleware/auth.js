@@ -4,7 +4,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'controle-financeiro-secret-key-cha
 
 function gerarToken(usuario) {
   return jwt.sign(
-    { id: usuario.id, email: usuario.email, nome: usuario.nome },
+    { id: usuario.id, email: usuario.email, nome: usuario.nome, admin: usuario.admin === 1 || usuario.admin === true },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -25,4 +25,11 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = { gerarToken, authMiddleware, JWT_SECRET };
+function adminMiddleware(req, res, next) {
+  if (!req.usuario || !req.usuario.admin) {
+    return res.status(403).json({ error: 'Acesso restrito a administradores' });
+  }
+  next();
+}
+
+module.exports = { gerarToken, authMiddleware, adminMiddleware, JWT_SECRET };
