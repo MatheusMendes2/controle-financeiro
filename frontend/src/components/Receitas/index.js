@@ -90,7 +90,7 @@ function Receitas() {
     }
   }
 
-  const total = receitas.reduce((acc, r) => acc + r.valor, 0);
+  const total = receitas.reduce((acc, r) => acc + Number(r.valor || 0), 0);
 
   return (
     <>

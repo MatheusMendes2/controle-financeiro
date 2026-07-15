@@ -254,19 +254,19 @@ function Relatorios() {
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total Receitas</div>
                     <div style={{ color: 'var(--accent-green)', fontWeight: 700, fontSize: 18 }}>
-                      {formatCurrency(fluxo.reduce((a, f) => a + f.receita, 0))}
+                      {formatCurrency(fluxo.reduce((a, f) => a + Number(f.receita || 0), 0))}
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total Despesas</div>
                     <div style={{ color: 'var(--accent-red)', fontWeight: 700, fontSize: 18 }}>
-                      {formatCurrency(fluxo.reduce((a, f) => a + f.despesa, 0))}
+                      {formatCurrency(fluxo.reduce((a, f) => a + Number(f.despesa || 0), 0))}
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Saldo Acumulado</div>
                     <div style={{ color: 'var(--accent-purple)', fontWeight: 700, fontSize: 18 }}>
-                      {formatCurrency(fluxo.reduce((a, f) => a + f.saldo, 0))}
+                      {formatCurrency(fluxo.reduce((a, f) => a + Number(f.saldo || 0), 0))}
                     </div>
                   </div>
                 </div>

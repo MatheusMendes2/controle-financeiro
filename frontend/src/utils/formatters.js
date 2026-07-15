@@ -2,10 +2,12 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export function formatCurrency(value) {
+  const num = Number(value);
+  if (isNaN(num)) return 'R$ 0,00';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value || 0);
+  }).format(num);
 }
 
 export function formatDate(dateStr) {

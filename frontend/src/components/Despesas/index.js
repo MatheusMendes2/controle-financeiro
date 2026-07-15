@@ -116,8 +116,8 @@ function Despesas() {
     }
   }
 
-  const total = despesas.reduce((acc, d) => acc + d.valor, 0);
-  const totalPendente = despesas.filter(d => d.status === 'pendente').reduce((acc, d) => acc + d.valor, 0);
+  const total = despesas.reduce((acc, d) => acc + Number(d.valor || 0), 0);
+  const totalPendente = despesas.filter(d => d.status === 'pendente').reduce((acc, d) => acc + Number(d.valor || 0), 0);
 
   return (
     <>
