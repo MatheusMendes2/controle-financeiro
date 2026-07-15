@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  FiDollarSign, FiShoppingCart, FiTrendingUp, FiTrendingDown
+  FiDollarSign, FiShoppingCart, FiTrendingUp, FiTrendingDown, FiPlus
 } from 'react-icons/fi';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -10,6 +11,7 @@ import { relatoriosAPI, categoriasAPI } from '../../services/api';
 import { formatCurrency, formatMonth, getCurrentMonth, getCurrentYear } from '../../utils/formatters';
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [dashboard, setDashboard] = useState(null);
   const [evolucao, setEvolucao] = useState([]);
   const [gastosCat, setGastosCat] = useState({ categorias: [], total: 0 });
@@ -89,8 +91,17 @@ function Dashboard() {
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>Dashboard</h2>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-primary" onClick={() => navigate('/receitas')}>
+            <FiPlus /> Nova Receita
+          </button>
+          <button className="btn btn-primary" onClick={() => navigate('/despesas')}
+            style={{ background: 'var(--accent-red)', backgroundImage: 'linear-gradient(135deg, #ef4444, #dc2626)' }}>
+            <FiPlus /> Nova Despesa
+          </button>
+        </div>
       </div>
       <div className="page-body">
         <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
