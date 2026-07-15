@@ -27,7 +27,27 @@ async function queryOne(sql, params = []) {
   return rows.length > 0 ? rows[0] : null;
 }
 
+async function migratedAddColumn(table, column, definition) {
+  const cols = await queryAll(
+    `SELECT column_name FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+    [table, column]
+  );
+  if (cols.length === 0) {
+    await query(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
 async function migrate() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      senha TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   await query(`
     CREATE TABLE IF NOT EXISTS categorias (
       id SERIAL PRIMARY KEY,
@@ -49,10 +69,13 @@ async function migrate() {
       categoria_id INTEGER NOT NULL REFERENCES categorias(id),
       data_recebimento DATE NOT NULL,
       observacao TEXT DEFAULT '',
+      usuario_id INTEGER REFERENCES usuarios(id),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await migratedAddColumn('receitas', 'usuario_id', 'INTEGER REFERENCES usuarios(id)');
 
   await query(`
     CREATE TABLE IF NOT EXISTS despesas (
@@ -68,10 +91,13 @@ async function migrate() {
       numero_parcelas INTEGER DEFAULT 1,
       parcela_atual INTEGER DEFAULT 1,
       id_parcelamento TEXT DEFAULT NULL,
+      usuario_id INTEGER REFERENCES usuarios(id),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await migratedAddColumn('despesas', 'usuario_id', 'INTEGER REFERENCES usuarios(id)');
 
   const cols = await queryAll(`
     SELECT column_name FROM information_schema.columns 

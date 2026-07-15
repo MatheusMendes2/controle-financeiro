@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { migrate } = require('./database');
+const authRouter = require('./routes/auth');
 const categoriasRouter = require('./routes/categorias');
 const receitasRouter = require('./routes/receitas');
 const despesasRouter = require('./routes/despesas');
@@ -16,6 +17,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/auth', authRouter);
 app.use('/api/categorias', categoriasRouter);
 app.use('/api/receitas', receitasRouter);
 app.use('/api/despesas', despesasRouter);

@@ -1,7 +1,10 @@
 const { Router } = require('express');
 const { queryAll, queryOne, query } = require('../database');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = Router();
+
+router.use(authMiddleware);
 
 router.get('/', async (req, res, next) => {
   try {
@@ -30,6 +33,7 @@ router.get('/', async (req, res, next) => {
     if (data_fim) {
       idx += 1; sql += ` AND r.data_recebimento <= $${idx}`; params.push(data_fim);
     }
+    idx += 1; sql += ` AND (r.usuario_id = $${idx} OR r.usuario_id IS NULL)`; params.push(req.usuario.id);
 
     sql += ' ORDER BY r.data_recebimento DESC, r.created_at DESC';
     const receitas = await queryAll(sql, params);
@@ -43,8 +47,8 @@ router.get('/:id', async (req, res, next) => {
       SELECT r.*, c.nome as categoria_nome, c.cor as categoria_cor
       FROM receitas r
       JOIN categorias c ON r.categoria_id = c.id
-      WHERE r.id = $1
-    `, [req.params.id]);
+      WHERE r.id = $1 AND (r.usuario_id = $2 OR r.usuario_id IS NULL)
+    `, [req.params.id, req.usuario.id]);
     if (!receita) return res.status(404).json({ error: 'Receita não encontrada' });
     res.json(receita);
   } catch (err) { next(err); }
@@ -57,8 +61,8 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Descrição, valor, categoria e data são obrigatórios' });
     }
     const result = await query(
-      `INSERT INTO receitas (descricao, valor, categoria_id, data_recebimento, observacao) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [descricao, valor, categoria_id, data_recebimento, observacao || '']
+      `INSERT INTO receitas (descricao, valor, categoria_id, data_recebimento, observacao, usuario_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [descricao, valor, categoria_id, data_recebimento, observacao || '', req.usuario.id]
     );
     const receita = await queryOne(`
       SELECT r.*, c.nome as categoria_nome, c.cor as categoria_cor
@@ -73,7 +77,7 @@ router.post('/', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const { descricao, valor, categoria_id, data_recebimento, observacao } = req.body;
-    const current = await queryOne('SELECT * FROM receitas WHERE id = $1', [req.params.id]);
+    const current = await queryOne('SELECT * FROM receitas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
     if (!current) return res.status(404).json({ error: 'Receita não encontrada' });
 
     await query(
@@ -99,7 +103,7 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const result = await query('DELETE FROM receitas WHERE id = $1', [req.params.id]);
+    const result = await query('DELETE FROM receitas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Receita não encontrada' });
     res.json({ message: 'Receita removida' });
   } catch (err) { next(err); }

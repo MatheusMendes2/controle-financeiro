@@ -1,8 +1,11 @@
 const { Router } = require('express');
 const crypto = require('crypto');
 const { queryAll, queryOne, query } = require('../database');
+const { authMiddleware } = require('../middleware/auth');
 
 const router = Router();
+
+router.use(authMiddleware);
 
 router.get('/', async (req, res, next) => {
   try {
@@ -40,6 +43,7 @@ router.get('/', async (req, res, next) => {
     if (parcelado !== undefined) {
       idx += 1; sql += ` AND d.parcelado = $${idx}`; params.push(Number(parcelado));
     }
+    idx += 1; sql += ` AND (d.usuario_id = $${idx} OR d.usuario_id IS NULL)`; params.push(req.usuario.id);
 
     sql += ' ORDER BY d.data DESC, d.created_at DESC';
     const despesas = await queryAll(sql, params);
@@ -53,9 +57,9 @@ router.get('/parcelamento/:id', async (req, res, next) => {
       `SELECT d.*, c.nome as categoria_nome, c.cor as categoria_cor
        FROM despesas d
        JOIN categorias c ON d.categoria_id = c.id
-       WHERE d.id_parcelamento = $1
+       WHERE d.id_parcelamento = $1 AND (d.usuario_id = $2 OR d.usuario_id IS NULL)
        ORDER BY d.parcela_atual`,
-      [req.params.id]
+      [req.params.id, req.usuario.id]
     );
     if (parcelas.length === 0) return res.status(404).json({ error: 'Parcelamento não encontrado' });
     res.json(parcelas);
@@ -68,8 +72,8 @@ router.get('/:id', async (req, res, next) => {
       SELECT d.*, c.nome as categoria_nome, c.cor as categoria_cor
       FROM despesas d
       JOIN categorias c ON d.categoria_id = c.id
-      WHERE d.id = $1
-    `, [req.params.id]);
+      WHERE d.id = $1 AND (d.usuario_id = $2 OR d.usuario_id IS NULL)
+    `, [req.params.id, req.usuario.id]);
     if (!despesa) return res.status(404).json({ error: 'Despesa não encontrada' });
     res.json(despesa);
   } catch (err) { next(err); }
@@ -100,8 +104,8 @@ router.post('/', async (req, res, next) => {
         : descricao;
 
       const result = await query(
-        `INSERT INTO despesas (descricao, valor, categoria_id, data, forma_pagamento, status, observacao, parcelado, numero_parcelas, parcela_atual, id_parcelamento)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        `INSERT INTO despesas (descricao, valor, categoria_id, data, forma_pagamento, status, observacao, parcelado, numero_parcelas, parcela_atual, id_parcelamento, usuario_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
         [
           installmentDescricao,
           i === totalParcelas
@@ -115,7 +119,8 @@ router.post('/', async (req, res, next) => {
           isParcelado ? 1 : 0,
           totalParcelas,
           i,
-          idParcelamento
+          idParcelamento,
+          req.usuario.id
         ]
       );
 
@@ -142,7 +147,7 @@ router.post('/', async (req, res, next) => {
 router.put('/:id', async (req, res, next) => {
   try {
     const { descricao, valor, categoria_id, data, forma_pagamento, status, observacao } = req.body;
-    const current = await queryOne('SELECT * FROM despesas WHERE id = $1', [req.params.id]);
+    const current = await queryOne('SELECT * FROM despesas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
     if (!current) return res.status(404).json({ error: 'Despesa não encontrada' });
 
     await query(
@@ -169,17 +174,17 @@ router.put('/:id', async (req, res, next) => {
 
 router.delete('/:id', async (req, res, next) => {
   try {
-    const current = await queryOne('SELECT * FROM despesas WHERE id = $1', [req.params.id]);
+    const current = await queryOne('SELECT * FROM despesas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
     if (!current) return res.status(404).json({ error: 'Despesa não encontrada' });
 
     const { remover_todas } = req.query;
 
     if (current.parcelado && current.id_parcelamento && remover_todas === 'true') {
-      const result = await query('DELETE FROM despesas WHERE id_parcelamento = $1', [current.id_parcelamento]);
+      const result = await query('DELETE FROM despesas WHERE id_parcelamento = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [current.id_parcelamento, req.usuario.id]);
       return res.json({ message: `${result.rowCount} parcelas removidas` });
     }
 
-    const result = await query('DELETE FROM despesas WHERE id = $1', [req.params.id]);
+    const result = await query('DELETE FROM despesas WHERE id = $1 AND (usuario_id = $2 OR usuario_id IS NULL)', [req.params.id, req.usuario.id]);
     res.json({ message: 'Despesa removida' });
   } catch (err) { next(err); }
 });
