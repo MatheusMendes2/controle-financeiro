@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: controle-financeiro
+    runtime: node
+    region: ohio
+    plan: free
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: financeiro-db
+          property: connectionString
+
+databases:
+  - name: financeiro-db
+    region: ohio
+    plan: free
+    databaseName: financeiro
+    user: financeiro_user
