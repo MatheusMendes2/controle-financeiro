@@ -27,7 +27,8 @@ export const despesasAPI = {
   get: (id) => api.get(`/despesas/${id}`),
   create: (data) => api.post('/despesas', data),
   update: (id, data) => api.put(`/despesas/${id}`, data),
-  delete: (id) => api.delete(`/despesas/${id}`)
+  delete: (id, config) => api.delete(`/despesas/${id}`, config),
+  getParcelas: (idParcelamento) => api.get(`/despesas/parcelamento/${idParcelamento}`)
 };
 
 export const relatoriosAPI = {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiShoppingCart } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiShoppingCart, FiLayers } from 'react-icons/fi';
 import { despesasAPI, categoriasAPI } from '../../services/api';
 import { formatCurrency, formatDate, toInputDate, getCurrentMonth, getCurrentYear } from '../../utils/formatters';
 import Modal from '../common/Modal';
@@ -29,7 +29,8 @@ function Despesas() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({
     descricao: '', valor: '', categoria_id: '', data: '',
-    forma_pagamento: 'pix', status: 'pendente', observacao: ''
+    forma_pagamento: 'pix', status: 'pendente', observacao: '',
+    parcelado: false, numero_parcelas: 2
   });
 
   const loadData = useCallback(async () => {
@@ -58,7 +59,8 @@ function Despesas() {
     setEditing(null);
     setForm({
       descricao: '', valor: '', categoria_id: '', data: new Date().toISOString().slice(0, 10),
-      forma_pagamento: 'pix', status: 'pendente', observacao: ''
+      forma_pagamento: 'pix', status: 'pendente', observacao: '',
+      parcelado: false, numero_parcelas: 2
     });
     setModalOpen(true);
   }
@@ -72,7 +74,9 @@ function Despesas() {
       data: toInputDate(despesa.data),
       forma_pagamento: despesa.forma_pagamento,
       status: despesa.status,
-      observacao: despesa.observacao || ''
+      observacao: despesa.observacao || '',
+      parcelado: false,
+      numero_parcelas: 2
     });
     setModalOpen(true);
   }
@@ -100,7 +104,7 @@ function Despesas() {
   async function handleDelete(id) {
     if (!window.confirm('Remover esta despesa?')) return;
     try {
-      await despesasAPI.delete(id);
+      await despesasAPI.delete(id, { params: { remover_todas: true } });
       loadData();
     } catch (err) {
       console.error('Erro ao remover despesa:', err);
@@ -113,6 +117,19 @@ function Despesas() {
       loadData();
     } catch (err) {
       console.error('Erro ao alterar status:', err);
+    }
+  }
+
+  async function verParcelas(idParcelamento) {
+    try {
+      const res = await despesasAPI.getParcelas(idParcelamento);
+      const parcelas = res.data;
+      const msg = parcelas.map(p =>
+        `  ${p.parcela_atual}/${p.numero_parcelas} - ${formatDate(p.data)} - ${formatCurrency(p.valor)} [${p.status}]`
+      ).join('\n');
+      alert(`Parcelas:\n${msg}`);
+    } catch (err) {
+      console.error(err);
     }
   }
 
@@ -165,6 +182,7 @@ function Despesas() {
                     <th>Categoria</th>
                     <th>Data</th>
                     <th>Pagamento</th>
+                    <th>Parcela</th>
                     <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Valor</th>
                     <th style={{ width: 80 }}></th>
@@ -185,6 +203,17 @@ function Despesas() {
                         {formasPagamento.find(f => f.value === d.forma_pagamento)?.label || d.forma_pagamento}
                       </td>
                       <td>
+                        {d.parcelado ? (
+                          <span className="badge badge-info" style={{ cursor: 'pointer' }}
+                            onClick={() => verParcelas(d.id_parcelamento)}
+                            title="Ver todas as parcelas">
+                            <FiLayers size={12} /> {d.parcela_atual}/{d.numero_parcelas}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>
+                        )}
+                      </td>
+                      <td>
                         <button
                           className={`badge ${d.status === 'paga' ? 'badge-success' : 'badge-warning'}`}
                           onClick={() => toggleStatus(d)}
@@ -198,7 +227,9 @@ function Despesas() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn-icon" onClick={() => openEdit(d)}><FiEdit2 /></button>
+                          {!d.parcelado && (
+                            <button className="btn-icon" onClick={() => openEdit(d)}><FiEdit2 /></button>
+                          )}
                           <button className="btn-icon" onClick={() => handleDelete(d.id)}><FiTrash2 /></button>
                         </div>
                       </td>
@@ -229,7 +260,7 @@ function Despesas() {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Valor (R$)</label>
+                <label className="form-label">Valor Total (R$)</label>
                 <input className="form-input" type="number" step="0.01" min="0.01" placeholder="0,00"
                   value={form.valor} onChange={e => setForm({ ...form, valor: e.target.value })} required />
               </div>
@@ -260,6 +291,40 @@ function Despesas() {
                 </select>
               </div>
             </div>
+
+            {!editing && (
+              <div className="form-group" style={{
+                background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)',
+                padding: '12px 16px', marginBottom: 16
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.parcelado}
+                    onChange={e => setForm({ ...form, parcelado: e.target.checked })}
+                    style={{ width: 18, height: 18, accentColor: 'var(--accent-purple)' }} />
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>Compra parcelada</span>
+                </label>
+                {form.parcelado && (
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <label style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      Número de parcelas:
+                    </label>
+                    <select className="form-select" value={form.numero_parcelas}
+                      onChange={e => setForm({ ...form, numero_parcelas: Number(e.target.value) })}
+                      style={{ width: 100 }}>
+                      {[2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                        <option key={n} value={n}>{n}x</option>
+                      ))}
+                    </select>
+                    {form.valor && Number(form.valor) > 0 && (
+                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                        {form.numero_parcelas}x de {formatCurrency(Number(form.valor) / form.numero_parcelas)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="form-group">
               <label className="form-label">Status</label>
               <div style={{ display: 'flex', gap: 12 }}>

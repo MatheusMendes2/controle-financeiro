@@ -64,10 +64,33 @@ async function migrate() {
       forma_pagamento TEXT NOT NULL DEFAULT 'dinheiro',
       status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('paga', 'pendente')),
       observacao TEXT DEFAULT '',
+      parcelado INTEGER DEFAULT 0,
+      numero_parcelas INTEGER DEFAULT 1,
+      parcela_atual INTEGER DEFAULT 1,
+      id_parcelamento TEXT DEFAULT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  const cols = await queryAll(`
+    SELECT column_name FROM information_schema.columns 
+    WHERE table_name = 'despesas' AND column_name IN ('parcelado','numero_parcelas','parcela_atual','id_parcelamento')
+  `);
+  const existingCols = cols.map(c => c.column_name);
+  if (!existingCols.includes('parcelado')) {
+    await query("ALTER TABLE despesas ADD COLUMN parcelado INTEGER DEFAULT 0");
+  }
+  if (!existingCols.includes('numero_parcelas')) {
+    await query("ALTER TABLE despesas ADD COLUMN numero_parcelas INTEGER DEFAULT 1");
+  }
+  if (!existingCols.includes('parcela_atual')) {
+    await query("ALTER TABLE despesas ADD COLUMN parcela_atual INTEGER DEFAULT 1");
+  }
+  if (!existingCols.includes('id_parcelamento')) {
+    await query("ALTER TABLE despesas ADD COLUMN id_parcelamento TEXT DEFAULT NULL");
+  }
+  await query('CREATE INDEX IF NOT EXISTS idx_despesas_parcelamento ON despesas(id_parcelamento)');
 
   await query('CREATE INDEX IF NOT EXISTS idx_receitas_data ON receitas(data_recebimento)');
   await query('CREATE INDEX IF NOT EXISTS idx_receitas_categoria ON receitas(categoria_id)');
